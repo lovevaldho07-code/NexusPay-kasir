@@ -598,11 +598,13 @@ export default function App() {
     <Text style={styles.btnBayarText}>Simpan</Text>
   </TouchableOpacity>
 </View>
+  <>
             <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Harga" placeholderTextColor={theme.subtext} value={editProduk.harga} onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})} keyboardType="number-pad"/>
             <View style={{flexDirection: 'row', gap: 10}}>
               <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}><Text style={styles.btnBayarText}>Batal</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}><Text style={styles.btnBayarText}>Simpan</Text></TouchableOpacity>
             </View>
+  </>
           </View>
         </View>
       </Modal>
