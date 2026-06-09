@@ -10,9 +10,8 @@ const CUSTOMER_KEY = '@nexuspay_customers';
 const THEME_KEY = '@nexuspay_theme';
 
 export default function App() {
-  const [screen, setScreen] = useState('menu'); // menu atau kasir
+  const [screen, setScreen] = useState('menu');
 
-  // ===== KODE KASIR LU YANG LAMA - TETEP UTUH =====
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [namaToko, setNamaToko] = useState('NexusPay');
   const [alamatToko, setAlamatToko] = useState('Jl. Melati No. 5, Malang');
@@ -229,14 +228,14 @@ export default function App() {
       return `
         <html><head><style>
           body { font-family: Arial; font-size: 12px; margin: 40px; color: #333; }
-        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2E7D32; padding-bottom: 15px; margin-bottom: 25px; }
-        .company h1 { margin: 0; font-size: 24px; color: #2E7D32; }
+       .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2E7D32; padding-bottom: 15px; margin-bottom: 25px; }
+       .company h1 { margin: 0; font-size: 24px; color: #2E7D32; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           th { background-color: #4CAF50; color: white; padding: 10px; text-align: left; font-size: 12px; }
           td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
-        .totals { width: 300px; margin-left: auto; margin-top: 20px; }
-        .grand-total { font-size: 18px; font-weight: bold; color: #2E7D32; border-top: 2px solid #2E7D32; background: #F1F8E9; }
-        .customer-box { margin-bottom: 20px; padding: 12px; border: 1px solid #4CAF50; border-radius: 8px; background: #F1F8E9; }
+       .totals { width: 300px; margin-left: auto; margin-top: 20px; }
+       .grand-total { font-size: 18px; font-weight: bold; color: #2E7D32; border-top: 2px solid #2E7D32; background: #F1F8E9; }
+       .customer-box { margin-bottom: 20px; padding: 12px; border: 1px solid #4CAF50; border-radius: 8px; background: #F1F8E9; }
         </style></head><body>
           <div class="header">
             <div class="company">
@@ -302,53 +301,33 @@ export default function App() {
     }
   };
 
-  // ===== HALAMAN MENU AWAL - IJO =====
   if(screen === 'menu') {
     return (
       <SafeAreaView style={styles.containerMenu}>
         <StatusBar backgroundColor="#2E7D32" barStyle="light-content" />
-
         <View style={styles.headerMenu}>
           <Text style={styles.judulMenu}>{namaToko}</Text>
           <Text style={styles.subMenu}>{alamatToko}</Text>
         </View>
-
         <View style={styles.gridMenu}>
-          <TouchableOpacity
-            style={styles.cardMenu}
-            onPress={() => setScreen('kasir')}
-          >
+          <TouchableOpacity style={styles.cardMenu} onPress={() => setScreen('kasir')}>
             <Text style={styles.cardTextMenu}>Transaksi / Kasir</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cardMenu}
-            onPress={() => setScreen('kasir')}
-          >
+          <TouchableOpacity style={styles.cardMenu} onPress={() => setScreen('kasir')}>
             <Text style={styles.cardTextMenu}>Setting</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cardMenu}
-            onPress={() => setScreen('kasir')}
-          >
+          <TouchableOpacity style={styles.cardMenu} onPress={() => setScreen('kasir')}>
             <Text style={styles.cardTextMenu}>Riwayat</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cardMenu}
-            onPress={() => Alert.alert('Profil', 'Nama: ' + namaToko + '\nTelp: ' + telpToko)}
-          >
+          <TouchableOpacity style={styles.cardMenu} onPress={() => Alert.alert('Profil', 'Nama: ' + namaToko + '\nTelp: ' + telpToko)}>
             <Text style={styles.cardTextMenu}>Profil Toko</Text>
           </TouchableOpacity>
         </View>
-
         <Text style={styles.versionMenu}>Version 1.3</Text>
       </SafeAreaView>
     )
   }
 
-  // ===== HALAMAN KASIR LU - GUE TAMBAHIN TOMBOL KEMBALI DOANG =====
   return (
     <View style={[styles.container, {backgroundColor: theme.bg}]}>
       <View style={styles.header}>
@@ -394,14 +373,12 @@ export default function App() {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios'? 'padding' : 'height'}>
               <View style={[styles.paymentBox, {backgroundColor: theme.card, paddingBottom: keyboardHeight + 20, marginBottom: 60}]}>
                 <View style={styles.totalRow}><Text style={[styles.totalLabel, {color: theme.subtext}]}>Total Bayar</Text><Text style={[styles.totalValue, {color: theme.text}]}>Rp{formatRupiah(total)}</Text></View>
-
                 <View style={styles.inputRow}>
                   <Text style={[styles.rpLabel, {color: theme.header}]}>Rp</Text>
                   <TextInput style={[styles.inputBayar, {borderColor: theme.border, backgroundColor: theme.input, color: theme.text}]} placeholder="0" placeholderTextColor={theme.subtext} value={formatRupiah(nominalBayar)} onChangeText={handleBayarChange} keyboardType="number-pad" returnKeyType="done"/>
                 </View>
                 <View style={styles.totalRow}><Text style={[styles.changeLabel, {color: theme.subtext}]}>Kembalian</Text><Text style={styles.changeValue}>Rp{formatRupiah(kembalian > 0? kembalian : 0)}</Text></View>
                 <TouchableOpacity style={[styles.btnBayar, {backgroundColor: theme.header}]} onPress={reviewInvoice}><Text style={styles.btnBayarText}>BAYAR & CETAK</Text></TouchableOpacity>
-
                 <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: theme.border}}>
                   <Text style={{marginRight: 8, fontSize: 13, color: theme.subtext}}>Mode Struk 58mm</Text>
                   <Switch value={isThermal} onValueChange={setIsThermal} />
@@ -415,14 +392,12 @@ export default function App() {
               <Text style={[styles.productName, {color: theme.text}]}>🌙 Dark Mode</Text>
               <Switch value={isDarkMode} onValueChange={setIsDarkMode} />
             </View>
-
             <Text style={[styles.sectionTitle, {color: theme.text}]}>Informasi Toko</Text>
             <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="Nama Toko" placeholderTextColor={theme.subtext} value={namaToko} onChangeText={setNamaToko}/>
             <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="Alamat Toko" placeholderTextColor={theme.subtext} value={alamatToko} onChangeText={setAlamatToko}/>
             <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="No Telepon" placeholderTextColor={theme.subtext} value={telpToko} onChangeText={setTelpToko} keyboardType="phone-pad"/>
             <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text, height: 80, textAlignVertical: 'top'}]} value={paymentMethods} onChangeText={setPaymentMethods} multiline placeholder="Payment Methods" placeholderTextColor={theme.subtext}/>
             <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text, height: 80, textAlignVertical: 'top'}]} value={notesToko} onChangeText={setNotesToko} multiline placeholder="Notes Invoice" placeholderTextColor={theme.subtext}/>
-
             <Text style={[styles.sectionTitle, {color: theme.text, marginTop: 20}]}>Manajemen Customer</Text>
             <TouchableOpacity style={[styles.btnTambahProduk, {backgroundColor: theme.header}]} onPress={() => {setEditCustomer({id: null, nama: '', telp: '', alamat: ''}); setModalCustomer(true)}}>
               <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>+ Tambah Customer</Text>
@@ -443,7 +418,6 @@ export default function App() {
                 </TouchableOpacity>
               </View>
             ))}
-
             <Text style={[styles.sectionTitle, {color: theme.text, marginTop: 20}]}>Manajemen Produk</Text>
             <TouchableOpacity style={[styles.btnTambahProduk, {backgroundColor: theme.header}]} onPress={() => {setEditProduk({id: null, nama: '', harga: ''}); setModalProduk(true)}}>
               <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>+ Tambah Produk</Text>
@@ -473,7 +447,6 @@ export default function App() {
                 </TouchableOpacity>
               )}
             </View>
-
             {riwayat.length === 0? (
               <Text style={{textAlign: 'center', marginTop: 50, color: theme.subtext}}>Belum ada transaksi</Text>
             ) : riwayat.map(item => (
@@ -547,159 +520,16 @@ export default function App() {
           <View style={[styles.modalBox, {backgroundColor: theme.card}]}>
             <Text style={{fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: theme.text}}>{editProduk.id? 'Edit' : 'Tambah'} Produk</Text>
             <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Nama Produk" placeholderTextColor={theme.subtext} value={editProduk.nama} onChangeText={(t) => setEditProduk({...editProduk, nama: t})}/>
-<TextInput 
-  style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} 
-  placeholder="Harga" 
-  placeholderTextColor={theme.subtext} 
-  value={editProduk.harga} 
-  onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})} 
-  keyboardType="number-pad"
-/>
-<View style={{flexDirection: 'row', gap: 10}}>
-  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}>
-    <Text style={styles.btnBayarText}>Batal</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}>
-    <Text style={styles.btnBayarText}>Simpan</Text>
-  </TouchableOpacity>
-</View>
-</View>
-</View>
-</Modal>
-
-<Modal visible={modalReview} animationType="slide">
-  <View style={{flex: 1, backgroundColor: theme.bg}}>
-    <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 15, paddingTop: 45, backgroundColor: theme.header}}>
-      <TouchableOpacity onPress={() => setModalReview(false)}><Text style={{color: 'white', fontSize: 16}}>Batal</Text></TouchableOpacity>
-      <Text style={{color: 'white', fontWeight: 'bold', fontSize: 18}}>Preview {isThermal? 'Struk' : 'Invoice'}</Text>
-      <TouchableOpacity onPress={cetakSekarang}><Text style={{color: 'white', fontSize: 16, fontWeight: 'bold'}}>Cetak</Text></TouchableOpacity>
-    </View>
-    <ScrollView style={{padding: 20}}>
-      <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: theme.text}}>{namaToko}</Text>
-      {customerTerpilih && <Text style={{marginBottom: 5, color: theme.text}}>Customer: {customerTerpilih.nama}</Text>}
-      <Text style={{marginBottom: 10, color: theme.text}}>Mode: {isThermal? 'Struk 58mm' : 'Invoice A4'}</Text>
-      <Text style={{marginBottom: 10, color: theme.text}}>Total: Rp{formatRupiah(total)}</Text>
-      {keranjang.map((item, i) => (
-        <Text key={i} style={{fontSize: 12, marginBottom: 3, color: theme.text}}>
-          {i+1}. {item.nama} x{item.jumlah} = Rp{formatRupiah(item.harga * item.jumlah)}
-        </Text>
-      ))}
-    </ScrollView>
-  </View>
-</Modal>
-</View>
-);
-}
-<View style={{flexDirection: 'row', gap: 10}}>
-  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}>
-    <Text style={styles.btnBayarText}>Batal</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}>
-    <Text style={styles.btnBayarText}>Simpan</Text>
-  </TouchableOpacity>
-</View>
-  <>
-            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Harga" placeholderTextColor={theme.subtext} value={editProduk.harga} onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})} keyboardType="number-pad"/>
+            <TextInput
+              style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]}
+              placeholder="Harga"
+              placeholderTextColor={theme.subtext}
+              value={editProduk.harga}
+              onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})}
+              keyboardType="number-pad"
+            />
             <View style={{flexDirection: 'row', gap: 10}}>
-              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}><Text style={styles.btnBayarText}>Batal</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}><Text style={styles.btnBayarText}>Simpan</Text></TouchableOpacity>
-            </View>
-  </>
-          </View>
-        </View>
-      </Modal>
-      <Modal visible={modalReview} animationType="slide">
-        <View style={{flex: 1, backgroundColor: theme.bg}}>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 15, paddingTop: 45, backgroundColor: theme.header}}>
-            <TouchableOpacity onPress={() => setModalReview(false)}><Text style={{color: 'white', fontSize: 16}}>Batal</Text></TouchableOpacity>
-            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 18}}>Preview {isThermal? 'Struk' : 'Invoice'}</Text>
-            <TouchableOpacity onPress={cetakSekarang}><Text style={{color: 'white', fontSize: 16, fontWeight: 'bold'}}>Cetak</Text></TouchableOpacity>
-          </View>
-          <ScrollView style={{padding: 20}}>
-            <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: theme.text}}>{namaToko}</Text>
-            {customerTerpilih && <Text style={{marginBottom: 5, color: theme.text}}>Customer: {customerTerpilih.nama}</Text>}
-            <Text style={{marginBottom: 10, color: theme.text}}>Mode: {isThermal? 'Struk 58mm' : 'Invoice A4'}</Text>
-            <Text style={{marginBottom: 10, color: theme.text}}>Total: Rp{formatRupiah(total)}</Text>
-            {keranjang.map((item, i) => (
-              <Text key={i} style={{fontSize: 12, marginBottom: 3, color: theme.text}}>
-                {i+1}. {item.nama} x{item.jumlah} = Rp{formatRupiah(item.harga * item.jumlah)}
-              </Text>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  containerMenu: { flex: 1, backgroundColor: '#2E7D32' },
-  headerMenu: { 
-    padding: 30, 
-    alignItems: 'center',
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    backgroundColor: '#1b5e20'
-  },
-  judulMenu: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-  subMenu: { fontSize: 14, color: '#c8e6c9', marginTop: 5 },
-  gridMenu: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    padding: 20,
-    marginTop: 30
-  },
-  cardMenu: {
-    width: '50%',
-    padding: 10,
-  },
-  cardTextMenu: {
-    backgroundColor: '#4caf50',
-    padding: 35,
-    textAlign: 'center',
-    borderRadius: 15,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    elevation: 3
-  },
-  versionMenu: { textAlign: 'center', marginTop: 'auto', marginBottom: 20, color: '#a5d6a7' },
-  header: { backgroundColor: '#2E7D32', paddingTop: 45, paddingBottom: 15, paddingHorizontal: 20 },
-  headerText: { fontSize: 22, fontWeight: 'bold', color: 'white', textAlign: 'center' },
-  headerSub: { fontSize: 12, color: '#C8E6C9', marginTop: 2, textAlign: 'center' },
-  productList: { padding: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
-  settingInput: { borderWidth: 1.5, borderRadius: 8, padding: 12, marginBottom: 10, fontSize: 15 },
-  productCard: { padding: 15, marginBottom: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4 },
-  productName: { fontSize: 15, fontWeight: '600' },
-  productPrice: { fontSize: 13, marginTop: 4 },
-  qtyControl: { flexDirection: 'row', alignItems: 'center' },
-  qtyBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  qtyBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  qtyInput: { width: 50, height: 40, borderWidth: 2, borderRadius: 8, marginHorizontal: 8, textAlign: 'center', fontWeight: 'bold', fontSize: 16 },
-  btnEditSmall: { backgroundColor: '#FFB74D', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginLeft: 8 },
-  btnHapus: { backgroundColor: '#E53935', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginLeft: 5 },
-  btnTambahProduk: { padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
-  btnPilihCustomer: { margin: 12, padding: 15, borderRadius: 10, borderWidth: 2 },
-  paymentBox: { padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  totalLabel: { fontSize: 14 },
-  totalValue: { fontSize: 24, fontWeight: 'bold' },
-  inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  rpLabel: { fontSize: 18, fontWeight: 'bold', marginRight: 8 },
-  inputBayar: { flex: 1, borderWidth: 2, borderRadius: 10, padding: 16, fontSize: 20, fontWeight: 'bold', height: 56 },
-  changeLabel: { fontSize: 14 },
-  changeValue: { fontSize: 20, fontWeight: 'bold', color: '#F57C00' },
-  btnBayar: { padding: 16, borderRadius: 12, marginTop: 8 },
-  btnBayarText: { color: 'white', textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
-  tabBar: { flexDirection: 'row', borderTopWidth: 1, height: 60 },
-  tabBtn: { flex: 1, padding: 15, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { fontWeight: 'bold', fontSize: 14 },
-  tabText: { fontSize: 14 },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalBox: { padding: 20, borderRadius: 15 },
-  modalInput: { borderWidth: 1.5, borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 },
-  customerItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  historyCard: { padding: 15, marginBottom: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }
-});
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}>
+                <Text style={styles.btnBayarText}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme
