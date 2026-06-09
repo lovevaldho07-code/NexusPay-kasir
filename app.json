@@ -8,7 +8,6 @@
     "android": {
       "package": "com.lovevaldho07.nexuspaykasir",
       "versionCode": 1
-    },
-    "plugins": ["expo-print"]
+    }
   }
 }
