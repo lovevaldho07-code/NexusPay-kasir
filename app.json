@@ -1,12 +1,11 @@
 {
   "expo": {
     "name": "NexusPay Kasir",
-    "slug": "nexuspaykasir",
+    "slug": "nexuspay-kasir",
     "version": "1.0.0",
-    "orientation": "portrait",
     "platforms": ["android"],
     "android": {
-      "package": "com.lovevaldho07.nexuspaykasir",
+      "package": "com.nexuspay.kasir",
       "versionCode": 1
     }
   }
