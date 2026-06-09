@@ -4,20 +4,14 @@
     "slug": "nexuspayskasir",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": [
-      "android"
-    ],
+    "platforms": ["android"],
     "android": {
       "package": "com.lovevaldho07.nexuspaykasir",
-      "versionCode": 1,
+      "versionCode": 3,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "buildToolsVersion": "35.0.0"
     },
-    "extra": {
-      "eas": {
-        "projectId": "bf3c68b7-072c-49bf-9902-cea36301ad01"
-      }
-    }
+    "plugins": ["expo-print"]
   }
 }
