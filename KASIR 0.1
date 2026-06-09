@@ -1,0 +1,703 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert, Switch, SafeAreaView, StatusBar } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@nexuspay_data';
+const HISTORY_KEY = '@nexuspay_history';
+const CUSTOMER_KEY = '@nexuspay_customers';
+const THEME_KEY = '@nexuspay_theme';
+
+export default function App() {
+  const [screen, setScreen] = useState('menu'); // menu atau kasir
+
+  // ===== KODE KASIR LU YANG LAMA - TETEP UTUH =====
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [namaToko, setNamaToko] = useState('NexusPay');
+  const [alamatToko, setAlamatToko] = useState('Jl. Melati No. 5, Malang');
+  const [telpToko, setTelpToko] = useState('0812-3456-7890');
+  const [notesToko, setNotesToko] = useState('Terima kasih berbelanja di NexusPay');
+  const [paymentMethods, setPaymentMethods] = useState('Cash / QRIS / Transfer');
+
+  const [tab, setTab] = useState('kasir');
+  const [produk, setProduk] = useState([
+    {id: 1, nama: 'Aqua 600ml', harga: 3000},
+    {id: 2, nama: 'Roti Tawar', harga: 12000},
+    {id: 3, nama: 'Indomie Goreng', harga: 3500},
+  ]);
+
+  const [customers, setCustomers] = useState([]);
+  const [customerTerpilih, setCustomerTerpilih] = useState(null);
+  const [modalCustomer, setModalCustomer] = useState(false);
+  const [modalPilihCustomer, setModalPilihCustomer] = useState(false);
+  const [editCustomer, setEditCustomer] = useState({id: null, nama: '', telp: '', alamat: ''});
+
+  const [keranjang, setKeranjang] = useState([]);
+  const [nominalBayar, setNominalBayar] = useState('');
+  const [isThermal, setIsThermal] = useState(false);
+  const [riwayat, setRiwayat] = useState([]);
+  const [modalProduk, setModalProduk] = useState(false);
+  const [modalReview, setModalReview] = useState(false);
+  const [htmlPreview, setHtmlPreview] = useState('');
+  const [editProduk, setEditProduk] = useState({id: null, nama: '', harga: ''});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    loadData();
+    loadHistory();
+    loadCustomers();
+    loadTheme();
+  }, []);
+
+  useEffect(() => { saveData(); }, [namaToko, alamatToko, telpToko, notesToko, paymentMethods, produk]);
+  useEffect(() => { AsyncStorage.setItem(THEME_KEY, JSON.stringify(isDarkMode)); }, [isDarkMode]);
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  const loadTheme = async () => {
+    const json = await AsyncStorage.getItem(THEME_KEY);
+    if (json) setIsDarkMode(JSON.parse(json));
+  };
+
+  const saveData = async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({namaToko, alamatToko, telpToko, notesToko, paymentMethods, produk}));
+  };
+
+  const loadData = async () => {
+    const json = await AsyncStorage.getItem(STORAGE_KEY);
+    if (json) {
+      const data = JSON.parse(json);
+      setNamaToko(data.namaToko || 'NexusPay');
+      setAlamatToko(data.alamatToko || '');
+      setTelpToko(data.telpToko || '');
+      setNotesToko(data.notesToko || '');
+      setPaymentMethods(data.paymentMethods || '');
+      setProduk(data.produk || []);
+    }
+  };
+
+  const saveCustomers = async (data) => {
+    setCustomers(data);
+    await AsyncStorage.setItem(CUSTOMER_KEY, JSON.stringify(data));
+  };
+
+  const loadCustomers = async () => {
+    const json = await AsyncStorage.getItem(CUSTOMER_KEY);
+    if (json) setCustomers(JSON.parse(json));
+  };
+
+  const simpanCustomer = () => {
+    if (!editCustomer.nama) return Alert.alert('Error', 'Nama customer wajib diisi');
+    if (editCustomer.id) {
+      saveCustomers(customers.map(c => c.id === editCustomer.id? editCustomer : c));
+    } else {
+      saveCustomers([...customers, {...editCustomer, id: Date.now()}]);
+    }
+    setModalCustomer(false);
+    setEditCustomer({id: null, nama: '', telp: '', alamat: ''});
+  };
+
+  const hapusCustomer = (id) => Alert.alert('Hapus', 'Yakin hapus customer ini?', [
+    {text: 'Batal', style: 'cancel'},
+    {text: 'Hapus', style: 'destructive', onPress: () => saveCustomers(customers.filter(c => c.id!== id))}
+  ]);
+
+  const saveHistory = async (invoice) => {
+    const newHistory = [invoice,...riwayat].slice(0, 50);
+    setRiwayat(newHistory);
+    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+  };
+
+  const loadHistory = async () => {
+    const json = await AsyncStorage.getItem(HISTORY_KEY);
+    if (json) setRiwayat(JSON.parse(json));
+  };
+
+  const hapusRiwayat = async (id) => {
+    Alert.alert('Hapus Riwayat', 'Yakin hapus transaksi ini?', [
+      {text: 'Batal', style: 'cancel'},
+      {text: 'Hapus', style: 'destructive', onPress: async () => {
+        const newRiwayat = riwayat.filter(item => item.id!== id);
+        setRiwayat(newRiwayat);
+        await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(newRiwayat));
+      }}
+    ]);
+  };
+
+  const hapusSemuaRiwayat = () => {
+    Alert.alert('Hapus Semua', 'Yakin hapus semua riwayat transaksi?', [
+      {text: 'Batal', style: 'cancel'},
+      {text: 'Hapus', style: 'destructive', onPress: async () => {
+        setRiwayat([]);
+        await AsyncStorage.removeItem(HISTORY_KEY);
+      }}
+    ]);
+  };
+
+  const formatRupiah = (angka) => {
+    if (!angka && angka!== 0) return '';
+    return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const handleBayarChange = (text) => setNominalBayar(text.replace(/\./g, ''));
+
+  const tambahKeKeranjang = (item) => {
+    setKeranjang(prev => {
+      const ada = prev.find(p => p.id === item.id);
+      if (ada) return prev.map(p => p.id === item.id? {...p, jumlah: p.jumlah + 1} : p);
+      return [...prev, {...item, jumlah: 1}];
+    });
+  };
+
+  const kurangJumlah = (id) => {
+    setKeranjang(keranjang.map(item => {
+      if (item.id === id) {
+        const jumlahBaru = item.jumlah - 1;
+        return jumlahBaru > 0? {...item, jumlah: jumlahBaru} : null;
+      }
+      return item;
+    }).filter(Boolean));
+  };
+
+  const ubahJumlah = (id, text) => {
+    const jumlah = parseInt(text) || 0;
+    if (jumlah <= 0) setKeranjang(keranjang.filter(item => item.id!== id));
+    else setKeranjang(keranjang.map(item => item.id === id? {...item, jumlah} : item));
+  };
+
+  const simpanProduk = () => {
+    if (!editProduk.nama ||!editProduk.harga) return Alert.alert('Error', 'Nama & Harga wajib diisi');
+    const hargaNum = parseInt(editProduk.harga.replace(/\./g, ''));
+    if (editProduk.id) setProduk(produk.map(p => p.id === editProduk.id? {...p, nama: editProduk.nama, harga: hargaNum} : p));
+    else setProduk([...produk, {id: Date.now(), nama: editProduk.nama, harga: hargaNum}]);
+    setModalProduk(false);
+    setEditProduk({id: null, nama: '', harga: ''});
+  };
+
+  const hapusProduk = (id) => Alert.alert('Hapus', 'Yakin?', [
+    {text: 'Batal', style: 'cancel'},
+    {text: 'Hapus', style: 'destructive', onPress: () => setProduk(produk.filter(p => p.id!== id))}
+  ]);
+
+  const total = keranjang.reduce((sum, item) => sum + item.harga * item.jumlah, 0);
+  const kembalian = parseInt(nominalBayar) - total || 0;
+
+  const theme = {
+    bg: isDarkMode? '#121212' : '#F1F8E9',
+    card: isDarkMode? '#1E1E1E' : 'white',
+    text: isDarkMode? '#E0E0E0' : '#1B5E20',
+    subtext: isDarkMode? '#B0B0B0' : '#666',
+    border: isDarkMode? '#333' : '#4CAF50',
+    header: '#2E7D32',
+    input: isDarkMode? '#2A2A2A' : '#F1F8E9',
+    tabBar: isDarkMode? '#1E1E1E' : 'white'
+  };
+
+  const buatHTML = () => {
+    const tanggal = new Date().toLocaleString('id-ID');
+    const noInvoice = 'INV-' + Date.now().toString().slice(-6);
+    const customerInfo = customerTerpilih?
+      `<p><b>Customer:</b> ${customerTerpilih.nama}<br><b>Telp:</b> ${customerTerpilih.telp || '-'}<br><b>Alamat:</b> ${customerTerpilih.alamat || '-'}</p>` : '';
+
+    if (isThermal) {
+      let struk = `<html><body style="font-family: monospace; font-size: 11px; width: 58mm; margin: 0; padding: 5px;">`;
+      struk += `<div style="text-align: center;"><b>${namaToko}</b><br>${alamatToko}<br>Telp: ${telpToko}</div><hr>`;
+      struk += `<div>No: ${noInvoice}<br>Tgl: ${tanggal}</div>`;
+      if (customerTerpilih) struk += `<div>Customer: ${customerTerpilih.nama}</div>`;
+      struk += `<hr>`;
+      keranjang.forEach(item => {
+        struk += `${item.nama}<br>${item.jumlah} x Rp${formatRupiah(item.harga)} = Rp${formatRupiah(item.harga * item.jumlah)}<br>`;
+      });
+      struk += `<hr>`;
+      struk += `<b>TOTAL: Rp${formatRupiah(total)}</b><br>`;
+      struk += `Bayar: Rp${formatRupiah(nominalBayar)}<br>`;
+      struk += `Kembali: Rp${formatRupiah(kembalian > 0? kembalian : 0)}<hr>`;
+      struk += `<div style="text-align: center;">${notesToko}</div>`;
+      struk += `</body></html>`;
+      return struk;
+    } else {
+      let barisBarang = '';
+      keranjang.forEach((item, index) => {
+        const subtotalItem = item.harga * item.jumlah;
+        barisBarang += `<tr><td style="text-align: center; padding: 8px;">${index + 1}</td><td style="padding: 8px;">${item.nama}</td><td style="text-align: center; padding: 8px;">${item.jumlah}</td><td style="text-align: right; padding: 8px;">Rp${formatRupiah(item.harga)}</td><td style="text-align: right; padding: 8px;">Rp${formatRupiah(subtotalItem)}</td></tr>`;
+      });
+
+      return `
+        <html><head><style>
+          body { font-family: Arial; font-size: 12px; margin: 40px; color: #333; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid #2E7D32; padding-bottom: 15px; margin-bottom: 25px; }
+        .company h1 { margin: 0; font-size: 24px; color: #2E7D32; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background-color: #4CAF50; color: white; padding: 10px; text-align: left; font-size: 12px; }
+          td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+        .totals { width: 300px; margin-left: auto; margin-top: 20px; }
+        .grand-total { font-size: 18px; font-weight: bold; color: #2E7D32; border-top: 2px solid #2E7D32; background: #F1F8E9; }
+        .customer-box { margin-bottom: 20px; padding: 12px; border: 1px solid #4CAF50; border-radius: 8px; background: #F1F8E9; }
+        </style></head><body>
+          <div class="header">
+            <div class="company">
+              <h1>${namaToko}</h1>
+              <p>${alamatToko}</p>
+              <p>Telp: ${telpToko}</p>
+              <p><b>No Invoice:</b> ${noInvoice}<br><b>Tanggal:</b> ${tanggal}</p>
+            </div>
+            <div style="font-size: 32px; font-weight: bold; color: #2E7D32;">INVOICE</div>
+          </div>
+          ${customerInfo? `<div class="customer-box">${customerInfo}</div>` : ''}
+          <table>
+            <thead><tr><th style="width: 5%; text-align: center;">No</th><th style="width: 45%;">Description</th><th style="width: 10%; text-align: center;">Qty</th><th style="width: 20%; text-align: right;">Unit Price</th><th style="width: 20%; text-align: right;">Total</th></tr></thead>
+            <tbody>${barisBarang}</tbody>
+          </table>
+          <table class="totals">
+            <tr class="grand-total"><td>Total Amount</td><td style="text-align: right;">Rp${formatRupiah(total)}</td></tr>
+          </table>
+          <div style="margin-top: 30px; border-left: 3px solid #4CAF50; padding-left: 12px;">
+            <h3 style="color: #2E7D32;">PAYMENT METHODS</h3>
+            <p style="white-space: pre-line; font-size: 11px;">${paymentMethods}</p>
+          </div>
+        </body></html>
+      `;
+    }
+  };
+
+  const reviewInvoice = () => {
+    if (keranjang.length === 0) return alert('Keranjang kosong!');
+    if (!nominalBayar || parseInt(nominalBayar) < total) return alert('Uang kurang!');
+    setHtmlPreview(buatHTML());
+    setModalReview(true);
+  };
+
+  const cetakSekarang = async () => {
+    try {
+      const { uri } = await Print.printToFileAsync({
+        html: htmlPreview,
+        width: isThermal? 210 : 595,
+        height: isThermal? 1000 : 842
+      });
+
+      const invoiceData = {
+        id: Date.now(),
+        noInvoice: 'INV-' + Date.now().toString().slice(-6),
+        tanggal: new Date().toLocaleString('id-ID'),
+        customer: customerTerpilih? customerTerpilih.nama : 'Umum',
+        items: keranjang,
+        total: total,
+        bayar: parseInt(nominalBayar),
+        kembali: kembalian,
+        tipe: isThermal? 'Thermal' : 'A4'
+      };
+      saveHistory(invoiceData);
+
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Simpan Invoice' });
+      setKeranjang([]);
+      setNominalBayar('');
+      setCustomerTerpilih(null);
+      setModalReview(false);
+    } catch (e) {
+      alert('Gagal cetak: ' + e.message);
+    }
+  };
+
+  // ===== HALAMAN MENU AWAL - IJO =====
+  if(screen === 'menu') {
+    return (
+      <SafeAreaView style={styles.containerMenu}>
+        <StatusBar backgroundColor="#2E7D32" barStyle="light-content" />
+
+        <View style={styles.headerMenu}>
+          <Text style={styles.judulMenu}>{namaToko}</Text>
+          <Text style={styles.subMenu}>{alamatToko}</Text>
+        </View>
+
+        <View style={styles.gridMenu}>
+          <TouchableOpacity
+            style={styles.cardMenu}
+            onPress={() => setScreen('kasir')}
+          >
+            <Text style={styles.cardTextMenu}>Transaksi / Kasir</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cardMenu}
+            onPress={() => setScreen('kasir')}
+          >
+            <Text style={styles.cardTextMenu}>Setting</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cardMenu}
+            onPress={() => setScreen('kasir')}
+          >
+            <Text style={styles.cardTextMenu}>Riwayat</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cardMenu}
+            onPress={() => Alert.alert('Profil', 'Nama: ' + namaToko + '\nTelp: ' + telpToko)}
+          >
+            <Text style={styles.cardTextMenu}>Profil Toko</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.versionMenu}>Version 1.3</Text>
+      </SafeAreaView>
+    )
+  }
+
+  // ===== HALAMAN KASIR LU - GUE TAMBAHIN TOMBOL KEMBALI DOANG =====
+  return (
+    <View style={[styles.container, {backgroundColor: theme.bg}]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setScreen('menu')} style={{position: 'absolute', left: 20, top: 45}}>
+          <Text style={{color: 'white', fontSize: 16, fontWeight: '600'}}>← Menu</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerText}>{namaToko}</Text>
+        <Text style={styles.headerSub}>{alamatToko}</Text>
+      </View>
+
+      <View style={{flex: 1}}>
+        {tab === 'kasir'? (
+          <>
+            <TouchableOpacity style={[styles.btnPilihCustomer, {backgroundColor: theme.card, borderColor: theme.border}]} onPress={() => setModalPilihCustomer(true)}>
+              <Text style={{fontWeight: '600', color: customerTerpilih? theme.header : theme.subtext}}>
+                {customerTerpilih? `👤 ${customerTerpilih.nama}` : '👤 Pilih Customer'}
+              </Text>
+              {customerTerpilih && <Text style={{fontSize: 12, color: theme.subtext}}>{customerTerpilih.telp}</Text>}
+            </TouchableOpacity>
+
+            <ScrollView style={styles.productList} keyboardShouldPersistTaps="handled">
+              {produk.map(item => {
+                const itemDiKeranjang = keranjang.find(k => k.id === item.id);
+                const jumlah = itemDiKeranjang? itemDiKeranjang.jumlah : 0;
+                return (
+                  <View key={item.id} style={[styles.productCard, {backgroundColor: theme.card, borderLeftColor: theme.border}]}>
+                    <TouchableOpacity style={{flex: 1}} onPress={() => jumlah === 0 && tambahKeKeranjang(item)}>
+                      <Text style={[styles.productName, {color: theme.text}]}>{item.nama}</Text>
+                      <Text style={[styles.productPrice, {color: theme.header}]}>Rp{formatRupiah(item.harga)}</Text>
+                    </TouchableOpacity>
+                    {jumlah > 0 && (
+                      <View style={styles.qtyControl}>
+                        <TouchableOpacity style={[styles.qtyBtn, {backgroundColor: theme.header}]} onPress={() => kurangJumlah(item.id)}><Text style={styles.qtyBtnText}>-</Text></TouchableOpacity>
+                        <TextInput style={[styles.qtyInput, {borderColor: theme.border, backgroundColor: theme.input, color: theme.text}]} value={jumlah.toString()} keyboardType="number-pad" onChangeText={(text) => ubahJumlah(item.id, text)}/>
+                        <TouchableOpacity style={[styles.qtyBtn, {backgroundColor: theme.header}]} onPress={() => tambahKeKeranjang(item)}><Text style={styles.qtyBtnText}>+</Text></TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios'? 'padding' : 'height'}>
+              <View style={[styles.paymentBox, {backgroundColor: theme.card, paddingBottom: keyboardHeight + 20, marginBottom: 60}]}>
+                <View style={styles.totalRow}><Text style={[styles.totalLabel, {color: theme.subtext}]}>Total Bayar</Text><Text style={[styles.totalValue, {color: theme.text}]}>Rp{formatRupiah(total)}</Text></View>
+
+                <View style={styles.inputRow}>
+                  <Text style={[styles.rpLabel, {color: theme.header}]}>Rp</Text>
+                  <TextInput style={[styles.inputBayar, {borderColor: theme.border, backgroundColor: theme.input, color: theme.text}]} placeholder="0" placeholderTextColor={theme.subtext} value={formatRupiah(nominalBayar)} onChangeText={handleBayarChange} keyboardType="number-pad" returnKeyType="done"/>
+                </View>
+                <View style={styles.totalRow}><Text style={[styles.changeLabel, {color: theme.subtext}]}>Kembalian</Text><Text style={styles.changeValue}>Rp{formatRupiah(kembalian > 0? kembalian : 0)}</Text></View>
+                <TouchableOpacity style={[styles.btnBayar, {backgroundColor: theme.header}]} onPress={reviewInvoice}><Text style={styles.btnBayarText}>BAYAR & CETAK</Text></TouchableOpacity>
+
+                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: theme.border}}>
+                  <Text style={{marginRight: 8, fontSize: 13, color: theme.subtext}}>Mode Struk 58mm</Text>
+                  <Switch value={isThermal} onValueChange={setIsThermal} />
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </>
+        ) : tab === 'setting'? (
+          <ScrollView style={styles.productList}>
+            <View style={[styles.productCard, {backgroundColor: theme.card, justifyContent: 'space-between'}]}>
+              <Text style={[styles.productName, {color: theme.text}]}>🌙 Dark Mode</Text>
+              <Switch value={isDarkMode} onValueChange={setIsDarkMode} />
+            </View>
+
+            <Text style={[styles.sectionTitle, {color: theme.text}]}>Informasi Toko</Text>
+            <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="Nama Toko" placeholderTextColor={theme.subtext} value={namaToko} onChangeText={setNamaToko}/>
+            <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="Alamat Toko" placeholderTextColor={theme.subtext} value={alamatToko} onChangeText={setAlamatToko}/>
+            <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text}]} placeholder="No Telepon" placeholderTextColor={theme.subtext} value={telpToko} onChangeText={setTelpToko} keyboardType="phone-pad"/>
+            <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text, height: 80, textAlignVertical: 'top'}]} value={paymentMethods} onChangeText={setPaymentMethods} multiline placeholder="Payment Methods" placeholderTextColor={theme.subtext}/>
+            <TextInput style={[styles.settingInput, {backgroundColor: theme.card, borderColor: theme.border, color: theme.text, height: 80, textAlignVertical: 'top'}]} value={notesToko} onChangeText={setNotesToko} multiline placeholder="Notes Invoice" placeholderTextColor={theme.subtext}/>
+
+            <Text style={[styles.sectionTitle, {color: theme.text, marginTop: 20}]}>Manajemen Customer</Text>
+            <TouchableOpacity style={[styles.btnTambahProduk, {backgroundColor: theme.header}]} onPress={() => {setEditCustomer({id: null, nama: '', telp: '', alamat: ''}); setModalCustomer(true)}}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>+ Tambah Customer</Text>
+            </TouchableOpacity>
+            {customers.length === 0? (
+              <Text style={{textAlign: 'center', color: theme.subtext, marginTop: 20}}>Belum ada customer</Text>
+            ) : customers.map(item => (
+              <View key={item.id} style={[styles.productCard, {backgroundColor: theme.card, borderLeftColor: theme.border}]}>
+                <View style={{flex: 1}}>
+                  <Text style={[styles.productName, {color: theme.text}]}>{item.nama}</Text>
+                  <Text style={{fontSize: 12, color: theme.subtext}}>{item.telp} - {item.alamat}</Text>
+                </View>
+                <TouchableOpacity onPress={() => {setEditCustomer(item); setModalCustomer(true)}} style={styles.btnEditSmall}>
+                  <Text style={{fontSize: 13, fontWeight: '600'}}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => hapusCustomer(item.id)} style={styles.btnHapus}>
+                  <Text style={{color: 'white', fontSize: 13, fontWeight: 'bold'}}>X</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <Text style={[styles.sectionTitle, {color: theme.text, marginTop: 20}]}>Manajemen Produk</Text>
+            <TouchableOpacity style={[styles.btnTambahProduk, {backgroundColor: theme.header}]} onPress={() => {setEditProduk({id: null, nama: '', harga: ''}); setModalProduk(true)}}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>+ Tambah Produk</Text>
+            </TouchableOpacity>
+            {produk.map(item => (
+              <View key={item.id} style={[styles.productCard, {backgroundColor: theme.card, borderLeftColor: theme.border}]}>
+                <View style={{flex: 1}}>
+                  <Text style={[styles.productName, {color: theme.text}]}>{item.nama}</Text>
+                  <Text style={[styles.productPrice, {color: theme.header}]}>Rp{formatRupiah(item.harga)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => {setEditProduk(item); setModalProduk(true)}} style={styles.btnEditSmall}>
+                  <Text style={{fontSize: 13, fontWeight: '600'}}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => hapusProduk(item.id)} style={styles.btnHapus}>
+                  <Text style={{color: 'white', fontSize: 13, fontWeight: 'bold'}}>X</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView style={styles.productList}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+              <Text style={[styles.sectionTitle, {color: theme.text}]}>Riwayat Transaksi</Text>
+              {riwayat.length > 0 && (
+                <TouchableOpacity onPress={hapusSemuaRiwayat}>
+                  <Text style={{color: '#E53935', fontWeight: 'bold', fontSize: 13}}>Hapus Semua</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {riwayat.length === 0? (
+              <Text style={{textAlign: 'center', marginTop: 50, color: theme.subtext}}>Belum ada transaksi</Text>
+            ) : riwayat.map(item => (
+              <View key={item.id} style={[styles.historyCard, {backgroundColor: theme.card}]}>
+                <View style={{flex: 1}}>
+                  <Text style={{fontWeight: 'bold', color: theme.text}}>{item.noInvoice}</Text>
+                  <Text style={{fontSize: 12, color: theme.subtext}}>{item.tanggal} - {item.tipe}</Text>
+                  <Text style={{fontSize: 12, color: theme.subtext}}>Customer: {item.customer}</Text>
+                </View>
+                <View style={{alignItems: 'flex-end'}}>
+                  <Text style={{fontWeight: 'bold', color: theme.header, marginBottom: 5}}>Rp{formatRupiah(item.total)}</Text>
+                  <TouchableOpacity onPress={() => hapusRiwayat(item.id)}>
+                    <Text style={{color: '#E53935', fontSize: 12}}>Hapus</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      <View style={[styles.tabBar, {backgroundColor: theme.tabBar, borderColor: theme.border}]}>
+        <TouchableOpacity style={styles.tabBtn} onPress={() => setTab('kasir')}>
+          <Text style={tab === 'kasir'? [styles.tabActive, {color: theme.header}] : [styles.tabText, {color: theme.subtext}]}>🧾 Kasir</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabBtn} onPress={() => setTab('setting')}>
+          <Text style={tab === 'setting'? [styles.tabActive, {color: theme.header}] : [styles.tabText, {color: theme.subtext}]}>⚙️ Setting</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabBtn} onPress={() => setTab('riwayat')}>
+          <Text style={tab === 'riwayat'? [styles.tabActive, {color: theme.header}] : [styles.tabText, {color: theme.subtext}]}>📜 Riwayat</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={modalCustomer} animationType="slide" transparent>
+        <View style={styles.modalBg}>
+          <View style={[styles.modalBox, {backgroundColor: theme.card}]}>
+            <Text style={{fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: theme.text}}>{editCustomer.id? 'Edit' : 'Tambah'} Customer</Text>
+            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Nama Customer" placeholderTextColor={theme.subtext} value={editCustomer.nama} onChangeText={(t) => setEditCustomer({...editCustomer, nama: t})}/>
+            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="No Telepon" placeholderTextColor={theme.subtext} value={editCustomer.telp} onChangeText={(t) => setEditCustomer({...editCustomer, telp: t})} keyboardType="phone-pad"/>
+            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Alamat" placeholderTextColor={theme.subtext} value={editCustomer.alamat} onChangeText={(t) => setEditCustomer({...editCustomer, alamat: t})}/>
+            <View style={{flexDirection: 'row', gap: 10}}>
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalCustomer(false)}><Text style={styles.btnBayarText}>Batal</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanCustomer}><Text style={styles.btnBayarText}>Simpan</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalPilihCustomer} animationType="slide" transparent>
+        <View style={styles.modalBg}>
+          <View style={[styles.modalBox, {backgroundColor: theme.card, maxHeight: '70%'}]}>
+            <Text style={{fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: theme.text}}>Pilih Customer</Text>
+            <ScrollView>
+              <TouchableOpacity style={[styles.customerItem,!customerTerpilih && {backgroundColor: isDarkMode? '#2A2A2A' : '#E8F5E9'}]} onPress={() => {setCustomerTerpilih(null); setModalPilihCustomer(false)}}>
+                <Text style={{fontWeight: '600', color: theme.text}}>Umum / Walk In</Text>
+              </TouchableOpacity>
+              {customers.map(item => (
+                <TouchableOpacity key={item.id} style={[styles.customerItem, customerTerpilih?.id === item.id && {backgroundColor: isDarkMode? '#2A2A2A' : '#E8F5E9'}]} onPress={() => {setCustomerTerpilih(item); setModalPilihCustomer(false)}}>
+                  <Text style={{fontWeight: '600', color: theme.text}}>{item.nama}</Text>
+                  <Text style={{fontSize: 12, color: theme.subtext}}>{item.telp}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnBayar, {marginTop: 10, backgroundColor: '#999'}]} onPress={() => setModalPilihCustomer(false)}><Text style={styles.btnBayarText}>Tutup</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalProduk} animationType="slide" transparent>
+        <View style={styles.modalBg}>
+          <View style={[styles.modalBox, {backgroundColor: theme.card}]}>
+            <Text style={{fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: theme.text}}>{editProduk.id? 'Edit' : 'Tambah'} Produk</Text>
+            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Nama Produk" placeholderTextColor={theme.subtext} value={editProduk.nama} onChangeText={(t) => setEditProduk({...editProduk, nama: t})}/>
+<TextInput 
+  style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} 
+  placeholder="Harga" 
+  placeholderTextColor={theme.subtext} 
+  value={editProduk.harga} 
+  onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})} 
+  keyboardType="number-pad"
+/>
+<View style={{flexDirection: 'row', gap: 10}}>
+  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}>
+    <Text style={styles.btnBayarText}>Batal</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}>
+    <Text style={styles.btnBayarText}>Simpan</Text>
+  </TouchableOpacity>
+</View>
+</View>
+</View>
+</Modal>
+
+<Modal visible={modalReview} animationType="slide">
+  <View style={{flex: 1, backgroundColor: theme.bg}}>
+    <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 15, paddingTop: 45, backgroundColor: theme.header}}>
+      <TouchableOpacity onPress={() => setModalReview(false)}><Text style={{color: 'white', fontSize: 16}}>Batal</Text></TouchableOpacity>
+      <Text style={{color: 'white', fontWeight: 'bold', fontSize: 18}}>Preview {isThermal? 'Struk' : 'Invoice'}</Text>
+      <TouchableOpacity onPress={cetakSekarang}><Text style={{color: 'white', fontSize: 16, fontWeight: 'bold'}}>Cetak</Text></TouchableOpacity>
+    </View>
+    <ScrollView style={{padding: 20}}>
+      <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: theme.text}}>{namaToko}</Text>
+      {customerTerpilih && <Text style={{marginBottom: 5, color: theme.text}}>Customer: {customerTerpilih.nama}</Text>}
+      <Text style={{marginBottom: 10, color: theme.text}}>Mode: {isThermal? 'Struk 58mm' : 'Invoice A4'}</Text>
+      <Text style={{marginBottom: 10, color: theme.text}}>Total: Rp{formatRupiah(total)}</Text>
+      {keranjang.map((item, i) => (
+        <Text key={i} style={{fontSize: 12, marginBottom: 3, color: theme.text}}>
+          {i+1}. {item.nama} x{item.jumlah} = Rp{formatRupiah(item.harga * item.jumlah)}
+        </Text>
+      ))}
+    </ScrollView>
+  </View>
+</Modal>
+</View>
+);
+}
+<View style={{flexDirection: 'row', gap: 10}}>
+  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}>
+    <Text style={styles.btnBayarText}>Batal</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}>
+    <Text style={styles.btnBayarText}>Simpan</Text>
+  </TouchableOpacity>
+</View>
+            <TextInput style={[styles.modalInput, {backgroundColor: theme.input, borderColor: theme.border, color: theme.text}]} placeholder="Harga" placeholderTextColor={theme.subtext} value={editProduk.harga} onChangeText={(t) => setEditProduk({...editProduk, harga: t.replace(/\./g, '')})} keyboardType="number-pad"/>
+            <View style={{flexDirection: 'row', gap: 10}}>
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: '#999'}]} onPress={() => setModalProduk(false)}><Text style={styles.btnBayarText}>Batal</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.btnBayar, {flex: 1, backgroundColor: theme.header}]} onPress={simpanProduk}><Text style={styles.btnBayarText}>Simpan</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={modalReview} animationType="slide">
+        <View style={{flex: 1, backgroundColor: theme.bg}}>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 15, paddingTop: 45, backgroundColor: theme.header}}>
+            <TouchableOpacity onPress={() => setModalReview(false)}><Text style={{color: 'white', fontSize: 16}}>Batal</Text></TouchableOpacity>
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 18}}>Preview {isThermal? 'Struk' : 'Invoice'}</Text>
+            <TouchableOpacity onPress={cetakSekarang}><Text style={{color: 'white', fontSize: 16, fontWeight: 'bold'}}>Cetak</Text></TouchableOpacity>
+          </View>
+          <ScrollView style={{padding: 20}}>
+            <Text style={{fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: theme.text}}>{namaToko}</Text>
+            {customerTerpilih && <Text style={{marginBottom: 5, color: theme.text}}>Customer: {customerTerpilih.nama}</Text>}
+            <Text style={{marginBottom: 10, color: theme.text}}>Mode: {isThermal? 'Struk 58mm' : 'Invoice A4'}</Text>
+            <Text style={{marginBottom: 10, color: theme.text}}>Total: Rp{formatRupiah(total)}</Text>
+            {keranjang.map((item, i) => (
+              <Text key={i} style={{fontSize: 12, marginBottom: 3, color: theme.text}}>
+                {i+1}. {item.nama} x{item.jumlah} = Rp{formatRupiah(item.harga * item.jumlah)}
+              </Text>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  containerMenu: { flex: 1, backgroundColor: '#2E7D32' },
+  headerMenu: { 
+    padding: 30, 
+    alignItems: 'center',
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    backgroundColor: '#1b5e20'
+  },
+  judulMenu: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
+  subMenu: { fontSize: 14, color: '#c8e6c9', marginTop: 5 },
+  gridMenu: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    padding: 20,
+    marginTop: 30
+  },
+  cardMenu: {
+    width: '50%',
+    padding: 10,
+  },
+  cardTextMenu: {
+    backgroundColor: '#4caf50',
+    padding: 35,
+    textAlign: 'center',
+    borderRadius: 15,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    elevation: 3
+  },
+  versionMenu: { textAlign: 'center', marginTop: 'auto', marginBottom: 20, color: '#a5d6a7' },
+  header: { backgroundColor: '#2E7D32', paddingTop: 45, paddingBottom: 15, paddingHorizontal: 20 },
+  headerText: { fontSize: 22, fontWeight: 'bold', color: 'white', textAlign: 'center' },
+  headerSub: { fontSize: 12, color: '#C8E6C9', marginTop: 2, textAlign: 'center' },
+  productList: { padding: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
+  settingInput: { borderWidth: 1.5, borderRadius: 8, padding: 12, marginBottom: 10, fontSize: 15 },
+  productCard: { padding: 15, marginBottom: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4 },
+  productName: { fontSize: 15, fontWeight: '600' },
+  productPrice: { fontSize: 13, marginTop: 4 },
+  qtyControl: { flexDirection: 'row', alignItems: 'center' },
+  qtyBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  qtyBtnText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  qtyInput: { width: 50, height: 40, borderWidth: 2, borderRadius: 8, marginHorizontal: 8, textAlign: 'center', fontWeight: 'bold', fontSize: 16 },
+  btnEditSmall: { backgroundColor: '#FFB74D', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginLeft: 8 },
+  btnHapus: { backgroundColor: '#E53935', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginLeft: 5 },
+  btnTambahProduk: { padding: 15, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
+  btnPilihCustomer: { margin: 12, padding: 15, borderRadius: 10, borderWidth: 2 },
+  paymentBox: { padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  totalLabel: { fontSize: 14 },
+  totalValue: { fontSize: 24, fontWeight: 'bold' },
+  inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  rpLabel: { fontSize: 18, fontWeight: 'bold', marginRight: 8 },
+  inputBayar: { flex: 1, borderWidth: 2, borderRadius: 10, padding: 16, fontSize: 20, fontWeight: 'bold', height: 56 },
+  changeLabel: { fontSize: 14 },
+  changeValue: { fontSize: 20, fontWeight: 'bold', color: '#F57C00' },
+  btnBayar: { padding: 16, borderRadius: 12, marginTop: 8 },
+  btnBayarText: { color: 'white', textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
+  tabBar: { flexDirection: 'row', borderTopWidth: 1, height: 60 },
+  tabBtn: { flex: 1, padding: 15, alignItems: 'center', justifyContent: 'center' },
+  tabActive: { fontWeight: 'bold', fontSize: 14 },
+  tabText: { fontSize: 14 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalBox: { padding: 20, borderRadius: 15 },
+  modalInput: { borderWidth: 1.5, borderRadius: 8, padding: 12, marginBottom: 12, fontSize: 16 },
+  customerItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  historyCard: { padding: 15, marginBottom: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }
+});
